@@ -1,0 +1,17 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- 洋葱主体 - 外层 -->
+  <circle cx="64" cy="70" r="45" fill="#e8e3f3" stroke="#d4c5e8" stroke-width="2"/>
+  
+  <!-- 洋葱主体 - 中层 -->
+  <circle cx="64" cy="70" r="35" fill="#f0ecf7" stroke="#d4c5e8" stroke-width="1.5"/>
+  
+  <!-- 洋葱主体 - 内层 -->
+  <circle cx="64" cy="70" r="25" fill="#f7f4fb" stroke="#d4c5e8" stroke-width="1"/>
+  
+  <!-- 洋葱主体 - 核心 -->
+  <circle cx="64" cy="70" r="15" fill="#fdfcfe" stroke="#d4c5e8" stroke-width="0.5"/>
+  
+  <!-- 装饰性的小叶子 -->
+  <ellipse cx="70" cy="22" rx="8" ry="16" fill="#6b9f7a" transform="rotate(15 76 18)"/>
+  <ellipse cx="55" cy="16" rx="4" ry="10" fill="#6b9f7a" transform="rotate(-20 52 16)"/>
+</svg>

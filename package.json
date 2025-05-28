@@ -1,0 +1,450 @@
+{
+    "name": "Onion-extension",
+    "displayName": "Onion Extension",
+    "description": "Onion语言支持",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "activationEvents": [],
+    "main": "./extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "Onion",
+                "aliases": [
+                    "Onion",
+                    "Onion"
+                ],
+                "extensions": [
+                    ".onion",
+                    ".Onion"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "Onion.run",
+                "title": "运行Onion文件"
+            },
+            {
+                "command": "Onion.diagnose",
+                "title": "Onion诊断"
+            },
+            {
+                "command": "Onion.triggerCompletion",
+                "title": "Onion代码补全"
+            }
+        ],
+        "menus": {
+            "editor/context": [
+                {
+                    "when": "editorLangId == Onion",
+                    "command": "Onion.run",
+                    "group": "navigation"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "when": "resourceExtname == .onion",
+                    "command": "Onion.run",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "Onion",
+            "properties": {
+                "Onion.runtimePath": {
+                    "type": "string",
+                    "default": "onion",
+                    "description": "Onion运行时可执行文件的路径"
+                },
+                "Onion.useFullPath": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "是否使用完整路径调用Onion可执行文件"
+                },
+                "Onion.workingDirectory": {
+                    "type": "string",
+                    "default": "",
+                    "description": "运行Onion时使用的工作目录，默认为文件所在目录"
+                },
+                "Onion.shellType": {
+                    "type": "string",
+                    "enum": [
+                        "default",
+                        "bash",
+                        "sh",
+                        "powershell",
+                        "cmd"
+                    ],
+                    "default": "default",
+                    "description": "使用的Shell类型"
+                },
+                "Onion.lspPort": {
+                    "type": "number",
+                    "default": 9257,
+                    "description": "LSP服务器使用的端口号"
+                },
+                "Onion.semanticHighlighting": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "是否启用语义着色功能"
+                }
+            }
+        },
+        "semanticTokenTypes": [
+            {
+                "id": "null",
+                "description": "空值标记",
+                "superType": "keyword"
+            },
+            {
+                "id": "boolean",
+                "description": "布尔值标记",
+                "superType": "keyword"
+            },
+            {
+                "id": "base64",
+                "description": "Base64编码数据",
+                "superType": "string"
+            },
+            {
+                "id": "let",
+                "description": "变量声明",
+                "superType": "variable"
+            },
+            {
+                "id": "body",
+                "description": "代码块主体",
+                "superType": "namespace"
+            },
+            {
+                "id": "boundary",
+                "description": "边界标记",
+                "superType": "operator"
+            },
+            {
+                "id": "assign",
+                "description": "赋值操作",
+                "superType": "operator"
+            },
+            {
+                "id": "lambdaDef",
+                "description": "Lambda定义",
+                "superType": "function"
+            },
+            {
+                "id": "expressions",
+                "description": "表达式",
+                "superType": "variable"
+            },
+            {
+                "id": "lambdaCall",
+                "description": "Lambda调用",
+                "superType": "function"
+            },
+            {
+                "id": "asyncLambdaCall",
+                "description": "异步Lambda调用",
+                "superType": "function"
+            },
+            {
+                "id": "operation",
+                "description": "操作符",
+                "superType": "operator"
+            },
+            {
+                "id": "tuple",
+                "description": "元组",
+                "superType": "struct"
+            },
+            {
+                "id": "assumeTuple",
+                "description": "推断元组",
+                "superType": "struct"
+            },
+            {
+                "id": "keyValue",
+                "description": "键值对",
+                "superType": "operator"
+            },
+            {
+                "id": "indexOf",
+                "description": "索引操作",
+                "superType": "operator"
+            },
+            {
+                "id": "getAttr",
+                "description": "获取属性",
+                "superType": "operator"
+            },
+            {
+                "id": "return",
+                "description": "返回语句",
+                "superType": "keyword"
+            },
+            {
+                "id": "raise",
+                "description": "异常抛出",
+                "superType": "keyword"
+            },
+            {
+                "id": "if",
+                "description": "条件语句",
+                "superType": "keyword"
+            },
+            {
+                "id": "while",
+                "description": "循环语句",
+                "superType": "keyword"
+            },
+            {
+                "id": "namedTo",
+                "description": "命名指向",
+                "superType": "variable"
+            },
+            {
+                "id": "break",
+                "description": "中断循环",
+                "superType": "keyword"
+            },
+            {
+                "id": "continue",
+                "description": "继续循环",
+                "superType": "keyword"
+            },
+            {
+                "id": "range",
+                "description": "范围操作",
+                "superType": "operator"
+            },
+            {
+                "id": "in",
+                "description": "包含判断",
+                "superType": "keyword"
+            },
+            {
+                "id": "emit",
+                "description": "异步产出",
+                "superType": "keyword"
+            },
+            {
+                "id": "alias",
+                "description": "别名定义",
+                "superType": "variable"
+            },
+            {
+                "id": "set",
+                "description": "集合类型",
+                "superType": "type"
+            },
+            {
+                "id": "map",
+                "description": "映射类型",
+                "superType": "type"
+            }
+        ],
+        "semanticTokenScopes": [
+            {
+                "scopes": {
+                    "comment" : ["comment.block.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "null": ["constant.language.null.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "boolean": ["constant.language.boolean.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "base64": ["string.base64.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "let": ["keyword.operator.arithmetic.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "body": ["entity.name.section.body.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "boundary": ["keyword.operator.arithmetic.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "assign": ["keyword.operator.arithmetic.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "lambdaDef": ["entity.name.function.lambda.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "expressions": ["comment.block.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "lambdaCall": ["meta.function-call.lambda.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "asyncLambdaCall": ["meta.function-call.async.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "operation": ["keyword.operator.arithmetic.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "tuple": ["support.type.tuple.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "assumeTuple": ["support.type.assumeTuple.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "keyValue": ["keyword.operator.arithmetic.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "indexOf": ["keyword.operator.index.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "getAttr": ["keyword.operator.arithmetic.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "return": ["keyword.control.flow.return.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "raise": ["keyword.control.exception.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "if": ["keyword.control.conditional.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "while": ["keyword.control.loop.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "namedTo": ["keyword.operator.arithmetic.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "break": ["keyword.control.loop.break.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "continue": ["keyword.control.loop.continue.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "range": ["constant.operator.range.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "in": ["keyword.operator.comparison.in.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "emit": ["keyword.control.flow.emit.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "alias": ["entity.name.type.alias.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "set": ["support.type.set.Onion"]
+                }
+            },
+            {
+                "scopes": {
+                    "map": ["support.type.map.Onion"]
+                }
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "Onion.run",
+                "key": "f5",
+                "mac": "f5",
+                "when": "editorLangId == Onion"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "echo 'No compilation needed'",
+        "watch": "echo 'Watch mode not supported'"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^9.0.1"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.60.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/sjrsjz/Onion-Extension.git"
+    },
+    "keywords": [
+        "vscode",
+        "Onion",
+        "extension",
+        "language",
+        "lsp"
+    ],
+    "author": "sjrsjz",
+    "license": "MIT",
+    "type": "commonjs",
+    "bugs": {
+        "url": "https://github.com/sjrsjz/Onion-Extension/issues"
+    },
+    "homepage": "https://github.com/sjrsjz/Onion-Extension#readme",
+    "icon": "images/icon.ico",
+    "publisher": "sjrsjz"
+}
