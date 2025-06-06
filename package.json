@@ -1,7 +1,7 @@
 {
     "name": "Onion-extension",
-    "displayName": "Onion Extension",
-    "description": "Onion语言支持",
+    "displayName": "Onion Language Support",
+    "description": "Language support for Onion programming language",
     "version": "0.1.0",
     "engines": {
         "vscode": "^1.60.0"
@@ -23,21 +23,25 @@
                     ".onion",
                     ".Onion"
                 ],
-                "configuration": "./language-configuration.json"
-            }
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./images/icon.svg",
+                    "dark": "./images/icon.svg"
+                }            }
         ],
         "commands": [
             {
                 "command": "Onion.run",
-                "title": "运行Onion文件"
+                "title": "Run Onion File",
+                "icon": "$(play)"
             },
             {
                 "command": "Onion.diagnose",
-                "title": "Onion诊断"
+                "title": "Onion Diagnostics"
             },
             {
                 "command": "Onion.triggerCompletion",
-                "title": "Onion代码补全"
+                "title": "Onion Code Completion"
             }
         ],
         "menus": {
@@ -54,25 +58,31 @@
                     "command": "Onion.run",
                     "group": "navigation"
                 }
+            ],
+            "editor/title/run": [
+                {
+                    "when": "resourceExtname == .onion",
+                    "command": "Onion.run",
+                    "group": "navigation"
+                }
             ]
         },
         "configuration": {
             "title": "Onion",
-            "properties": {
-                "Onion.runtimePath": {
+            "properties": {                "Onion.runtimePath": {
                     "type": "string",
                     "default": "onion",
-                    "description": "Onion运行时可执行文件的路径"
+                    "description": "Path to the Onion runtime executable"
                 },
                 "Onion.useFullPath": {
                     "type": "boolean",
                     "default": false,
-                    "description": "是否使用完整路径调用Onion可执行文件"
+                    "description": "Whether to use full path when calling Onion executable"
                 },
                 "Onion.workingDirectory": {
                     "type": "string",
                     "default": "",
-                    "description": "运行Onion时使用的工作目录，默认为文件所在目录"
+                    "description": "Working directory to use when running Onion, defaults to file directory"
                 },
                 "Onion.shellType": {
                     "type": "string",
@@ -82,328 +92,388 @@
                         "sh",
                         "powershell",
                         "cmd"
-                    ],
-                    "default": "default",
-                    "description": "使用的Shell类型"
+                    ],                    "default": "default",
+                    "description": "Shell type to use"
                 },
                 "Onion.lspPort": {
                     "type": "number",
                     "default": 9257,
-                    "description": "LSP服务器使用的端口号"
+                    "description": "Port number used by LSP server"
                 },
                 "Onion.semanticHighlighting": {
                     "type": "boolean",
                     "default": true,
-                    "description": "是否启用语义着色功能"
+                    "description": "Whether to enable semantic highlighting"
                 }
             }
         },
-        "semanticTokenTypes": [
-            {
+        "semanticTokenTypes": [            {
                 "id": "null",
-                "description": "空值标记",
+                "description": "Null value token",
                 "superType": "keyword"
             },
             {
                 "id": "boolean",
-                "description": "布尔值标记",
+                "description": "Boolean value token",
                 "superType": "keyword"
             },
             {
                 "id": "base64",
-                "description": "Base64编码数据",
+                "description": "Base64 encoded data",
                 "superType": "string"
             },
             {
                 "id": "let",
-                "description": "变量声明",
+                "description": "Variable declaration",
                 "superType": "variable"
             },
             {
                 "id": "body",
-                "description": "代码块主体",
+                "description": "Code block body",
                 "superType": "namespace"
             },
             {
                 "id": "boundary",
-                "description": "边界标记",
+                "description": "Boundary marker",
                 "superType": "operator"
             },
             {
                 "id": "assign",
-                "description": "赋值操作",
+                "description": "Assignment operation",
                 "superType": "operator"
             },
             {
                 "id": "lambdaDef",
-                "description": "Lambda定义",
+                "description": "Lambda definition",
                 "superType": "function"
             },
             {
                 "id": "expressions",
-                "description": "表达式",
+                "description": "Expressions",
                 "superType": "variable"
             },
             {
                 "id": "lambdaCall",
-                "description": "Lambda调用",
+                "description": "Lambda call",
                 "superType": "function"
             },
             {
                 "id": "asyncLambdaCall",
-                "description": "异步Lambda调用",
+                "description": "Async lambda call",
                 "superType": "function"
             },
             {
                 "id": "operation",
-                "description": "操作符",
+                "description": "Operation",
                 "superType": "operator"
             },
             {
                 "id": "tuple",
-                "description": "元组",
+                "description": "Tuple",
                 "superType": "struct"
             },
             {
                 "id": "assumeTuple",
-                "description": "推断元组",
+                "description": "Assumed tuple",
                 "superType": "struct"
             },
             {
                 "id": "keyValue",
-                "description": "键值对",
+                "description": "Key-value pair",
                 "superType": "operator"
             },
             {
                 "id": "indexOf",
-                "description": "索引操作",
+                "description": "Index operation",
                 "superType": "operator"
             },
             {
                 "id": "getAttr",
-                "description": "获取属性",
+                "description": "Get attribute",
                 "superType": "operator"
             },
             {
                 "id": "return",
-                "description": "返回语句",
+                "description": "Return statement",
                 "superType": "keyword"
             },
             {
                 "id": "raise",
-                "description": "异常抛出",
+                "description": "Raise exception",
                 "superType": "keyword"
             },
             {
                 "id": "if",
-                "description": "条件语句",
+                "description": "Conditional statement",
                 "superType": "keyword"
             },
             {
                 "id": "while",
-                "description": "循环语句",
+                "description": "Loop statement",
                 "superType": "keyword"
             },
             {
                 "id": "namedTo",
-                "description": "命名指向",
+                "description": "Named reference",
                 "superType": "variable"
             },
             {
                 "id": "break",
-                "description": "中断循环",
+                "description": "Break loop",
                 "superType": "keyword"
             },
             {
                 "id": "continue",
-                "description": "继续循环",
+                "description": "Continue loop",
                 "superType": "keyword"
             },
             {
                 "id": "range",
-                "description": "范围操作",
+                "description": "Range operation",
                 "superType": "operator"
             },
             {
                 "id": "in",
-                "description": "包含判断",
+                "description": "Contains check",
                 "superType": "keyword"
             },
             {
                 "id": "emit",
-                "description": "异步产出",
+                "description": "Async emit",
                 "superType": "keyword"
             },
             {
                 "id": "alias",
-                "description": "别名定义",
+                "description": "Alias definition",
                 "superType": "variable"
             },
             {
                 "id": "set",
-                "description": "集合类型",
+                "description": "Set type",
                 "superType": "type"
             },
             {
                 "id": "map",
-                "description": "映射类型",
+                "description": "Map type",
                 "superType": "type"
             }
         ],
         "semanticTokenScopes": [
             {
                 "scopes": {
-                    "comment" : ["comment.block.Onion"]
+                    "comment": [
+                        "comment.block.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "null": ["constant.language.null.Onion"]
+                    "null": [
+                        "constant.language.null.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "boolean": ["constant.language.boolean.Onion"]
+                    "boolean": [
+                        "constant.language.boolean.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "base64": ["string.base64.Onion"]
+                    "base64": [
+                        "string.base64.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "let": ["keyword.operator.arithmetic.Onion"]
+                    "let": [
+                        "keyword.operator.arithmetic.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "body": ["entity.name.section.body.Onion"]
+                    "body": [
+                        "entity.name.section.body.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "boundary": ["keyword.operator.arithmetic.Onion"]
+                    "boundary": [
+                        "keyword.operator.arithmetic.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "assign": ["keyword.operator.arithmetic.Onion"]
+                    "assign": [
+                        "keyword.operator.arithmetic.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "lambdaDef": ["entity.name.function.lambda.Onion"]
+                    "lambdaDef": [
+                        "entity.name.function.lambda.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "expressions": ["comment.block.Onion"]
+                    "expressions": [
+                        "comment.block.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "lambdaCall": ["meta.function-call.lambda.Onion"]
+                    "lambdaCall": [
+                        "meta.function-call.lambda.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "asyncLambdaCall": ["meta.function-call.async.Onion"]
+                    "asyncLambdaCall": [
+                        "meta.function-call.async.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "operation": ["keyword.operator.arithmetic.Onion"]
+                    "operation": [
+                        "keyword.operator.arithmetic.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "tuple": ["support.type.tuple.Onion"]
+                    "tuple": [
+                        "support.type.tuple.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "assumeTuple": ["support.type.assumeTuple.Onion"]
+                    "assumeTuple": [
+                        "support.type.assumeTuple.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "keyValue": ["keyword.operator.arithmetic.Onion"]
+                    "keyValue": [
+                        "keyword.operator.arithmetic.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "indexOf": ["keyword.operator.index.Onion"]
+                    "indexOf": [
+                        "keyword.operator.index.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "getAttr": ["keyword.operator.arithmetic.Onion"]
+                    "getAttr": [
+                        "keyword.operator.arithmetic.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "return": ["keyword.control.flow.return.Onion"]
+                    "return": [
+                        "keyword.control.flow.return.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "raise": ["keyword.control.exception.Onion"]
+                    "raise": [
+                        "keyword.control.exception.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "if": ["keyword.control.conditional.Onion"]
+                    "if": [
+                        "keyword.control.conditional.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "while": ["keyword.control.loop.Onion"]
+                    "while": [
+                        "keyword.control.loop.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "namedTo": ["keyword.operator.arithmetic.Onion"]
+                    "namedTo": [
+                        "keyword.operator.arithmetic.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "break": ["keyword.control.loop.break.Onion"]
+                    "break": [
+                        "keyword.control.loop.break.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "continue": ["keyword.control.loop.continue.Onion"]
+                    "continue": [
+                        "keyword.control.loop.continue.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "range": ["constant.operator.range.Onion"]
+                    "range": [
+                        "constant.operator.range.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "in": ["keyword.operator.comparison.in.Onion"]
+                    "in": [
+                        "keyword.operator.comparison.in.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "emit": ["keyword.control.flow.emit.Onion"]
+                    "emit": [
+                        "keyword.control.flow.emit.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "alias": ["entity.name.type.alias.Onion"]
+                    "alias": [
+                        "entity.name.type.alias.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "set": ["support.type.set.Onion"]
+                    "set": [
+                        "support.type.set.Onion"
+                    ]
                 }
             },
             {
                 "scopes": {
-                    "map": ["support.type.map.Onion"]
+                    "map": [
+                        "support.type.map.Onion"
+                    ]
                 }
             }
         ],

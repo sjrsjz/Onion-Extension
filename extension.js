@@ -5,63 +5,57 @@ const fs = require('fs');
 const net = require('net');
 const { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } = require('vscode-languageclient/node');
 
-// 保存终端引用
+// Save terminal reference
 let OnionTerminal = null;
-// 保存LSP客户端引用
+// Save LSP client reference
 let langClient = null;
 
 /**
- * 激活扩展时被调用
+ * Called when extension is activated
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
-    console.log('Onion扩展已激活');
-
-    // 启动LSP服务器
+    console.log('Onion extension activated');    // Start LSP server
     startLSP(context);
-    // 注册运行Onion文件的命令
+    // Register command to run Onion files
     let disposable = vscode.commands.registerCommand('Onion.run', function () {
         runOnionFile();
     });
-    // 添加测试命令
+    // Add test command
     let testDisposable = vscode.commands.registerCommand('Onion.diagnose', () => {
-        // 获取当前活动编辑器和文档
+        // Get current active editor and document
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
-            vscode.window.showInformationMessage('没有打开的编辑器');
+            vscode.window.showInformationMessage('No active editor');
             return;
-        }
-
-        const document = editor.document;
+        }        const document = editor.document;
         const report = [
-            `文件名: ${document.fileName}`,
-            `语言ID: ${document.languageId}`,
-            `扩展名: ${path.extname(document.fileName)}`,
-            `LSP客户端状态: ${langClient ? '已启动' : '未启动'}`,
-            `自动补全状态: ${langClient && langClient.initializeResult && 
-                langClient.initializeResult.capabilities.completionProvider ? '可用' : '不可用'}`,
-            `语义令牌状态: ${langClient && langClient.initializeResult && 
-                langClient.initializeResult.capabilities.semanticTokensProvider ? '可用' : '不可用'}`
+            `File name: ${document.fileName}`,
+            `Language ID: ${document.languageId}`,
+            `Extension: ${path.extname(document.fileName)}`,
+            `LSP client status: ${langClient ? 'Started' : 'Not started'}`,
+            `Auto completion status: ${langClient && langClient.initializeResult && 
+                langClient.initializeResult.capabilities.completionProvider ? 'Available' : 'Not available'}`,
+            `Semantic tokens status: ${langClient && langClient.initializeResult && 
+                langClient.initializeResult.capabilities.semanticTokensProvider ? 'Available' : 'Not available'}`
         ];
 
-        console.log('Onion诊断报告:\n' + report.join('\n'));
-        vscode.window.showInformationMessage('Onion诊断报告已生成，请查看控制台');
+        console.log('Onion diagnostic report:\n' + report.join('\n'));
+        vscode.window.showInformationMessage('Onion diagnostic report generated, please check console');
 
-        // 尝试将文件设置为Onion类型
+        // Try to set file as Onion type
         if (document.languageId !== 'Onion') {
-            vscode.window.showInformationMessage('当前文件不是Onion类型，尝试设置...');
+            vscode.window.showInformationMessage('Current file is not Onion type, trying to set...');
             vscode.languages.setTextDocumentLanguage(document, 'Onion')
                 .then(() => {
-                    vscode.window.showInformationMessage('成功设置为Onion类型');
+                    vscode.window.showInformationMessage('Successfully set as Onion type');
                 })
                 .catch(err => {
-                    vscode.window.showErrorMessage(`设置失败: ${err.message}`);
+                    vscode.window.showErrorMessage(`Failed to set: ${err.message}`);
                 });
-        }
-
-        // 如果LSP客户端已启动，尝试发送测试通知
+        }        // If LSP client is started, try to send test notification
         if (langClient) {
-            // 发送测试通知
+            // Send test notification
             langClient.sendNotification('textDocument/didChange', {
                 textDocument: {
                     uri: document.uri.toString(),
@@ -69,101 +63,94 @@ function activate(context) {
                 },
                 contentChanges: [{ text: document.getText() }]
             });
-            console.log('已发送测试通知到LSP服务器');
+            console.log('Test notification sent to LSP server');
             
-            // 手动请求语义令牌
+            // Manually request semantic tokens
             langClient.sendRequest('textDocument/semanticTokens/full', {
                 textDocument: {
                     uri: document.uri.toString()
                 }
             }).then(tokens => {
-                console.log('收到语义令牌:', tokens ? '有数据' : '无数据');
+                console.log('Received semantic tokens:', tokens ? 'Has data' : 'No data');
                 if (tokens) {
-                    console.log('令牌数据前100项:', JSON.stringify(tokens).substring(0, 500) + '...');
+                    console.log('Token data first 100 items:', JSON.stringify(tokens).substring(0, 500) + '...');
                 }
             }).catch(err => {
-                console.error('请求语义令牌失败:', err);
+                console.error('Failed to request semantic tokens:', err);
             });
-        }
-
-        // 如果LSP客户端已启动，尝试手动触发自动补全功能测试
+        }        // If LSP client is started, try to manually trigger auto completion function test
         if (langClient && langClient.initializeResult && 
             langClient.initializeResult.capabilities.completionProvider) {
-            console.log('自动补全功能已配置，可以使用补全提示');
-            vscode.window.showInformationMessage('自动补全功能已启用，请尝试在编辑器中输入触发字符');
+            console.log('Auto completion feature configured, can use completion hints');
+            vscode.window.showInformationMessage('Auto completion feature enabled, please try typing trigger characters in editor');
         } else if (langClient) {
-            console.log('LSP服务器未提供自动补全功能');
-            vscode.window.showWarningMessage('LSP服务器未提供自动补全功能，请检查服务器实现');
+            console.log('LSP server does not provide auto completion feature');
+            vscode.window.showWarningMessage('LSP server does not provide auto completion feature, please check server implementation');
         }
     });
 
-    // 添加手动触发自动补全命令
-    let completionDisposable = vscode.commands.registerCommand('Onion.triggerCompletion', async () => {
-        const editor = vscode.window.activeTextEditor;
+    // Add manual trigger auto completion command
+    let completionDisposable = vscode.commands.registerCommand('Onion.triggerCompletion', async () => {        const editor = vscode.window.activeTextEditor;
         if (!editor || editor.document.languageId !== 'Onion') {
-            vscode.window.showInformationMessage('请在Onion文件中使用此命令');
+            vscode.window.showInformationMessage('Please use this command in an Onion file');
             return;
         }
         
-        // 使用自定义方法直接向LSP发送补全请求
+        // Use custom method to directly send completion request to LSP
         await requestCompletionFromLSP(editor.document, editor.selection.active);
-        console.log('手动向LSP服务器发送了补全请求');
+        console.log('Manually sent completion request to LSP server');
     });
-    
-    // 监听文本编辑事件，以便在用户输入后自动触发补全
+      // Listen to text editing events to automatically trigger completion after user input
     const typingCompletionDisposable = vscode.workspace.onDidChangeTextDocument(event => {
         if (event.document.languageId === 'Onion' && 
             event.contentChanges.length > 0 && 
             event.contentChanges[0].text.length > 0) {
             
-            // 获取当前活动编辑器
+            // Get current active editor
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document === event.document) {
-                // 延迟触发以避免频繁触发
+                // Delay trigger to avoid frequent triggers
                 setTimeout(() => {
-                    // 使用LSP请求获取补全
+                    // Use LSP request to get completion
                     requestCompletionFromLSP(event.document, editor.selection.active);
                 }, 100);
             }
         }
     });
 
-    // 监听终端关闭事件，清除引用
+    // Listen to terminal close events to clear references
     vscode.window.onDidCloseTerminal(terminal => {
         if (OnionTerminal === terminal) {
             OnionTerminal = null;
         }
-    });
-
-    // 添加文档变更监听器
+    });    // Add document change listener
     context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument((event) => {
-            // 检查是否为 Onion 文件
+            // Check if it's an Onion file
             if (event.document.languageId === 'Onion' && langClient) {
-                console.log('检测到 Onion 文件变更，发送全量更新到 LSP 服务器');
+                console.log('Detected Onion file change, sending full update to LSP server');
 
-                // 发送完整文档内容而不是增量变更
+                // Send complete document content instead of incremental changes
                 langClient.sendNotification('textDocument/didChange', {
                     textDocument: {
                         uri: event.document.uri.toString(),
                         version: event.document.version
                     },
-                    // 使用单个内容变更项，包含完整文档内容
+                    // Use single content change item containing complete document content
                     contentChanges: [
                         {
                             text: event.document.getText()
                         }
                     ]
                 });
-            }
-        })
+            }        })
     );
-    // 添加文档保存监听器
+    // Add document save listener
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument((document) => {
             if (document.languageId === 'Onion' && langClient) {
-                console.log('Onion 文件已保存，重新验证文档');
-                // 触发文档验证
+                console.log('Onion file saved, re-validating document');
+                // Trigger document validation
                 langClient.sendNotification('textDocument/didSave', {
                     textDocument: {
                         uri: document.uri.toString(),
@@ -172,13 +159,11 @@ function activate(context) {
                 });
             }
         })
-    );
-
-    // 添加文档打开监听器
+    );    // Add document open listener
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument((document) => {
             if (document.languageId === 'Onion' && langClient) {
-                console.log('Onion 文件已打开，通知 LSP 服务器');
+                console.log('Onion file opened, notifying LSP server');
                 langClient.sendNotification('textDocument/didOpen', {
                     textDocument: {
                         uri: document.uri.toString(),
@@ -189,13 +174,11 @@ function activate(context) {
                 });
             }
         })
-    );
-
-    // 添加文档关闭监听器
+    );    // Add document close listener
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument((document) => {
             if (document.languageId === 'Onion' && langClient) {
-                console.log('Onion 文件已关闭，通知 LSP 服务器');
+                console.log('Onion file closed, notifying LSP server');
                 langClient.sendNotification('textDocument/didClose', {
                     textDocument: {
                         uri: document.uri.toString()
@@ -216,13 +199,12 @@ function activate(context) {
             { scheme: 'untitled', language: 'Onion' },
             { scheme: 'file', pattern: '**/*.onion' }
         ],
-        {
-            async provideCompletionItems(document, position, token, context) {
-                // 使用LSP请求获取补全项并转换为VSCode补全项
+        {            async provideCompletionItems(document, position, token, context) {
+                // Use LSP request to get completion items and convert to VSCode completion items
                 return requestCompletionFromLSP(document, position);
             }
         },
-        // 触发字符
+        // Trigger characters
         '.', ':', '(', ')', '[', ']', '{', '}', ',', ';',
         '+', '-', '*', '/', '%', '=', '!', '&', '|', '^', '~'
     );
@@ -232,75 +214,71 @@ function activate(context) {
 }
 
 /**
- * 启动LSP服务器
+ * Start LSP server
  * @param {vscode.ExtensionContext} context 
  */
 function startLSP(context) {
-    // 获取Onion可执行文件路径
+    // Get Onion executable file path
     const config = vscode.workspace.getConfiguration('Onion');
     let runtimePath = config.get('runtimePath') || 'onion';
 
-    // 解析波浪符号为用户主目录
+    // Parse tilde symbol to user home directory
     if (runtimePath.startsWith('~')) {
         const homedir = require('os').homedir();
         runtimePath = path.join(homedir, runtimePath.substring(1));
-    }
-
-    // 检查runtimePath是否为目录，如果是则尝试找到可执行文件
+    }    // Check if runtimePath is a directory, if so try to find executable file
     if (fs.existsSync(runtimePath) && fs.statSync(runtimePath).isDirectory()) {
-        // 在Linux/Mac上查找没有扩展名的可执行文件，在Windows上查找.exe文件
+        // Look for executable without extension on Linux/Mac, look for .exe file on Windows
         const exeName = process.platform === 'win32' ? 'onion.exe' : 'onion';
         const possiblePath = path.join(runtimePath, exeName);
 
         if (fs.existsSync(possiblePath)) {
-            console.log(`找到可执行文件: ${possiblePath}`);
+            console.log(`Found executable file: ${possiblePath}`);
             runtimePath = possiblePath;
         } else {
-            // 如果是目录但找不到可执行文件，则查找 target/release 子目录
+            // If it's a directory but can't find executable, search target/release subdirectory
             const releasePath = path.join(runtimePath, 'target', 'release', exeName);
             if (fs.existsSync(releasePath)) {
-                console.log(`找到可执行文件: ${releasePath}`);
+                console.log(`Found executable file: ${releasePath}`);
                 runtimePath = releasePath;
             }
         }
     }
 
-    // 检查runtimePath是否存在
+    // Check if runtimePath exists
     const pathExists = fs.existsSync(runtimePath);
-    if (!pathExists) {
-        if (path.isAbsolute(runtimePath)) {
-            const message = `Onion可执行文件不存在于路径: ${runtimePath}。LSP功能无法正常工作。`;
+    if (!pathExists) {        if (path.isAbsolute(runtimePath)) {
+            const message = `Onion executable file does not exist at path: ${runtimePath}. LSP functionality will not work properly.`;
             vscode.window.showErrorMessage(message);
             console.error(message);
-            return; // 如果文件不存在，直接退出函数
+            return; // Exit function if file doesn't exist
         } else {
-            console.log(`尝试使用环境变量中的命令: ${runtimePath}`);
+            console.log(`Trying to use command from environment variables: ${runtimePath}`);
         }
     } else {
-        console.log(`使用Onion可执行文件: ${runtimePath}`);
+        console.log(`Using Onion executable file: ${runtimePath}`);
     }
 
-    // 定义初始TCP端口，可以是随机生成的或配置的固定端口
-    let initialPort = config.get('lspPort') || 9257; // 默认9257端口，可通过配置修改
+    // Define initial TCP port, can be randomly generated or configured fixed port
+    let initialPort = config.get('lspPort') || 9257; // Default port 9257, configurable
 
-    // 自动查找可用端口
+    // Automatically find available port
     findAvailablePort(initialPort)
         .then(availablePort => {
-            console.log(`LSP将使用端口: ${availablePort}`);
+            console.log(`LSP will use port: ${availablePort}`);
             startActualLSP(context, runtimePath, availablePort);
-        })
-        .catch(err => {
-            const msg = `无法找到可用端口: ${err.message}`;
+        })        .catch(err => {
+            const msg = `Unable to find available port: ${err.message}`;
             vscode.window.showErrorMessage(msg);
             console.error(msg);
         });
 }
 
 /**
- * 查找可用端口
- * @param {number} startPort 起始端口
- * @param {number} maxAttempts 最大尝试次数
- * @returns {Promise<number>} 可用端口
+ * Find available port
+ * @param {number} startPort Starting port
+ * @param {number} maxAttempts Maximum number of attempts
+ * @returns {Promise<number>} Available port
  */
 function findAvailablePort(startPort, maxAttempts = 10) {
     return new Promise((resolve, reject) => {
@@ -309,7 +287,7 @@ function findAvailablePort(startPort, maxAttempts = 10) {
 
         function tryPort(port) {
             if (attempts >= maxAttempts) {
-                reject(new Error(`在尝试${maxAttempts}个端口后仍未找到可用端口`));
+                reject(new Error(`Could not find available port after trying ${maxAttempts} ports`));
                 return;
             }
 
@@ -318,7 +296,7 @@ function findAvailablePort(startPort, maxAttempts = 10) {
 
             server.once('error', err => {
                 if (err.code === 'EADDRINUSE') {
-                    console.log(`端口 ${port} 已被占用，尝试下一个端口...`);
+                    console.log(`Port ${port} is in use, trying next port...`);
                     tryPort(port + 1);
                 } else {
                     reject(err);
@@ -338,13 +316,13 @@ function findAvailablePort(startPort, maxAttempts = 10) {
     });
 }
 /**
- * 实际启动LSP服务器
+ * Actually start LSP server
  */
 function startActualLSP(context, runtimePath, lspPort) {
-    console.log(`正在启动LSP服务器: ${runtimePath} lsp --port ${lspPort}`);
+    console.log(`Starting LSP server: ${runtimePath} lsp --port ${lspPort}`);
     function checkExecutable() {
         return new Promise((resolve, reject) => {
-            console.log(`检查可执行文件: ${runtimePath}`);
+            console.log(`Checking executable: ${runtimePath}`);
             const helpProcess = spawn(runtimePath, ['--help']);
             let stdoutData = '';
             let stderrData = '';
@@ -355,105 +333,103 @@ function startActualLSP(context, runtimePath, lspPort) {
 
             helpProcess.stderr.on('data', (data) => {
                 stderrData += data.toString();
-            });
-
-            helpProcess.on('error', (err) => {
-                reject(new Error(`可执行文件验证失败: ${err.message}`));
+            });            helpProcess.on('error', (err) => {
+                reject(new Error(`Executable validation failed: ${err.message}`));
             });
 
             helpProcess.on('exit', (code) => {
                 if (code === 0) {
-                    console.log('可执行文件验证成功');
+                    console.log('Executable validation successful');
                     resolve(true);
                 } else {
-                    reject(new Error(`可执行文件验证失败，退出码: ${code}, 输出: ${stdoutData}, 错误: ${stderrData}`));
+                    reject(new Error(`Executable validation failed, exit code: ${code}, output: ${stdoutData}, error: ${stderrData}`));
                 }
             });
         });
     }
-    // 服务器选项配置 - 使用TCP连接，添加重试逻辑
+    // Server options configuration - using TCP connection, adding retry logic
     const serverOptions = () => {
         return new Promise(async (resolve, reject) => {
             try {
-                // 首先验证可执行文件
+                // First validate executable
                 await checkExecutable();
 
-                // 配置启动参数，增加调试标志
+                // Configure startup parameters, add debug flags
                 const args = ['lsp', '--port', lspPort.toString()];
-                console.log(`启动命令: ${runtimePath} ${args.join(' ')}`);
+                console.log(`Startup command: ${runtimePath} ${args.join(' ')}`);
 
-                // 启动进程
+                // Start process
                 const lspProcess = spawn(runtimePath, args);
                 let started = false;
                 let outputBuffer = '';
                 let connectAttempts = 0;
                 const maxConnectAttempts = 5;
 
-                // 处理进程标准输出
+                // Handle process standard output
                 lspProcess.stdout.on('data', (data) => {
                     const message = data.toString();
                     outputBuffer += message;
-                    console.log(`LSP服务器输出: ${message.trim()}`);
+                    console.log(`LSP server output: ${message.trim()}`);
 
-                    // 检查是否有启动成功的信息
+                    // Check if there's startup success information
                     if (message.includes("LSP server started") ||
-                        message.includes("服务器已启动") ||
+                        message.includes("server started") ||
                         message.includes("listening") ||
                         (!started && message.includes("port"))) {
 
-                        console.log(`检测到LSP服务器启动信息，准备连接到端口: ${lspPort}`);
+                        console.log(`Detected LSP server startup info, preparing to connect to port: ${lspPort}`);
                         started = true;
 
-                        // 定义连接函数，支持重试
+                        // Define connection function with retry support
                         const attemptConnection = () => {
                             connectAttempts++;
-                            console.log(`尝试连接 #${connectAttempts}...`);
+                            console.log(`Attempting connection #${connectAttempts}...`);
 
                             try {
-                                // 建立TCP socket连接
+                                // Establish TCP socket connection
                                 const socket = net.connect(lspPort);
 
                                 socket.on('connect', () => {
-                                    console.log(`已成功连接到LSP服务器端口: ${lspPort}`);
+                                    console.log(`Successfully connected to LSP server port: ${lspPort}`);
                                 });
 
                                 socket.on('error', (err) => {
-                                    console.error(`Socket连接错误 #${connectAttempts}: ${err.message}`);
+                                    console.error(`Socket connection error #${connectAttempts}: ${err.message}`);
                                     if (connectAttempts < maxConnectAttempts) {
-                                        console.log(`2秒后重试连接...`);
+                                        console.log(`Retrying connection in 2 seconds...`);
                                         setTimeout(attemptConnection, 2000);
                                     } else {
-                                        reject(new Error(`连接失败，已重试${maxConnectAttempts}次: ${err.message}`));
+                                        reject(new Error(`Connection failed after ${maxConnectAttempts} retries: ${err.message}`));
                                     }
                                 });
 
-                                // 返回reader和writer
+                                // Return reader and writer
                                 resolve({
                                     reader: socket,
                                     writer: socket
                                 });
                             } catch (err) {
-                                console.error(`创建连接时出错 #${connectAttempts}: ${err.message}`);
+                                console.error(`Error creating connection #${connectAttempts}: ${err.message}`);
                                 if (connectAttempts < maxConnectAttempts) {
-                                    console.log(`2秒后重试连接...`);
+                                    console.log(`Retrying connection in 2 seconds...`);
                                     setTimeout(attemptConnection, 2000);
                                 } else {
-                                    reject(new Error(`连接失败，已重试${maxConnectAttempts}次: ${err.message}`));
+                                    reject(new Error(`Connection failed after ${maxConnectAttempts} retries: ${err.message}`));
                                 }
                             }
                         };
 
-                        // 增加延迟时间，确保服务器完全启动
+                        // Add delay time to ensure server fully starts
                         setTimeout(attemptConnection, 2000);
                     }
                 });
 
-                // 处理进程错误输出
+                // Handle process error output
                 lspProcess.stderr.on('data', (data) => {
                     const msg = data.toString();
-                    console.log(`LSP服务器输出: ${msg}`);
+                    console.log(`LSP server output: ${msg}`);
 
-                    // 有些情况下错误输出也可能包含启动信息
+                    // In some cases, error output may also contain startup information
                     if (!started && (msg.includes("Listening") || msg.includes("port"))) {
                         started = true;
                         setTimeout(() => {
@@ -470,36 +446,35 @@ function startActualLSP(context, runtimePath, lspPort) {
                     }
                 });
 
-                // 处理进程退出事件
+                // Handle process exit event
                 lspProcess.on('exit', (code) => {
                     if (code !== 0 && !started) {
-                        const message = `Onion LSP服务器进程以状态码 ${code} 退出`;
+                        const message = `Onion LSP server process exited with status code ${code}`;
                         console.error(message);
                         reject(new Error(message));
                     } else if (started) {
-                        console.log(`LSP服务器进程退出，但连接已建立`);
+                        console.log(`LSP server process exited, but connection has been established`);
                     }
                 });
 
-                // 处理进程启动错误
+                // Handle process startup errors
                 lspProcess.on('error', (err) => {
-                    const message = `无法启动Onion LSP服务器: ${err.message}`;
+                    const message = `Unable to start Onion LSP server: ${err.message}`;
                     console.error(message);
                     reject(new Error(message));
                 });
 
-                // 定时检查是否成功连接
+                // Timed check for successful connection
                 setTimeout(() => {
                     if (!started) {
-                        // 超时时打印收集到的所有输出，帮助调试
-                        console.error('等待LSP服务器启动超时');
-                        console.error('收集到的输出:', outputBuffer);
-                        reject(new Error('等待LSP服务器启动超时'));
+                        // Print all collected output on timeout to help debugging                        console.error('Timeout waiting for LSP server startup');
+                        console.error('Collected output:', outputBuffer);
+                        reject(new Error('Timeout waiting for LSP server startup'));
                     }
-                }, 20000); // 增加超时时间至20秒
+                }, 20000); // Increase timeout to 20 seconds
 
             } catch (err) {
-                console.error('启动LSP服务器前验证失败:', err.message);
+                console.error('Pre-startup LSP server validation failed:', err.message);
                 reject(err);
             }
         });
@@ -509,15 +484,15 @@ function startActualLSP(context, runtimePath, lspPort) {
         documentSelector: [
             { scheme: 'file', language: 'Onion' },
             { scheme: 'untitled', language: 'Onion' },
-            { scheme: 'file', pattern: '**/*.onion' }, // 添加文件模式匹配
+            { scheme: 'file', pattern: '**/*.onion' }, // Add file pattern matching
         ],
         synchronize: {
             configurationSection: 'Onion',
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{x,Onion}'), // 支持多种扩展名
-            // 添加文档内容变化的同步支持
+            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{x,Onion}'), // Support multiple extensions
+            // Add document content change synchronization support
             textDocumentSync: {
                 openClose: true,
-                change: 2, // 完整文档同步
+                change: 2, // Full document synchronization
                 willSave: true,
                 willSaveWaitUntil: true,
                 save: {
@@ -525,35 +500,35 @@ function startActualLSP(context, runtimePath, lspPort) {
                 }
             }
         },
-        // 增强的自动补全功能
+        // Enhanced auto-completion functionality
         middleware: {
             provideCompletionItem: (document, position, context, token, next) => {
 
             },
-            // 添加内联补全支持
+            // Add inline completion support
             provideInlineCompletionItems: async (document, position, context, token, next) => {
-                // 如果原始中间件链支持内联补全，则继续
+                // If the original middleware chain supports inline completion, continue
                 if (next) {
                     return next(document, position, context, token);
                 }
                 return null;
             }
         },
-        // 配置功能支持
+        // Configuration feature support
         capabilities: {
-            // 明确声明支持自动补全，并减少触发限制
+            // Explicitly declare auto-completion support and reduce trigger restrictions
             completionProvider: {
                 resolveProvider: true,
                 triggerCharacters: [
                     '(', ')', '[', ']', '{', '}', '.', ',', ';', ':',
-                    // 添加更多触发字符
+                    // Add more trigger characters
                     '+', '-', '*', '/', '%', '=', '!', '&', '|', '^', '~'
                 ],
                 allCommitCharacters: [' ', '\t', '\n', '(', ')', '[', ']', '{', '}', '.', ',', ';', ':']
             },
-            // 支持内联补全功能
+            // Support inline completion functionality
             inlineCompletionProvider: true,
-            // 添加语义着色支持
+            // Add semantic coloring support
             semanticTokensProvider: {
                 full: true,
                 range: false
@@ -563,18 +538,16 @@ function startActualLSP(context, runtimePath, lspPort) {
         revealOutputChannelOn: 1
     };
     try {
-        // 创建语言客户端
-        langClient = new LanguageClient('OnionLanguageServer', 'Onion Language Server', serverOptions, clientOptions);
-
-        // 在启动前，先注册语义令牌类型和修饰符
-        // 定义语义令牌类型（按照LSP规范）
+        // Create language client
+        langClient = new LanguageClient('OnionLanguageServer', 'Onion Language Server', serverOptions, clientOptions);        // Before starting, first register semantic token types and modifiers
+        // Define semantic token types (according to LSP specification)
         const tokenTypes = [
             'namespace', 'type', 'class', 'enum', 'interface',
             'struct', 'typeParameter', 'parameter', 'variable', 'property',
             'enumMember', 'event', 'function', 'method', 'macro',
             'keyword', 'modifier', 'comment', 'string', 'number',
             'regexp', 'operator', 'decorator',
-            // Onion自定义语义令牌类型
+            // Onion custom semantic token types
             'null', 'boolean', 'base64', 'let', 'body',
             'boundary', 'assign', 'lambdaDef', 'expressions', 'lambdaCall',
             'asyncLambdaCall', 'operation', 'tuple', 'assumeTuple', 'keyValue',
@@ -583,7 +556,7 @@ function startActualLSP(context, runtimePath, lspPort) {
             'in', 'emit', 'alias', 'set', 'map'
         ];
         
-        // 定义语义令牌修饰符
+        // Define semantic token modifiers
         const tokenModifiers = [
             'declaration', 'definition', 'readonly', 'static',
             'deprecated', 'abstract', 'async', 'modification',
@@ -591,7 +564,7 @@ function startActualLSP(context, runtimePath, lspPort) {
         ];
         
   
-        // 注册语义令牌信息
+        // Register semantic token information
         const legend = {
             tokenTypes,
             tokenModifiers
@@ -614,49 +587,44 @@ function startActualLSP(context, runtimePath, lspPort) {
             }
         };
         
-        // 添加语义令牌处理中间件
+        // Add semantic token processing middleware
         langClient.clientOptions.middleware = {
             ...(langClient.clientOptions.middleware || {}),
-            // 处理语义令牌的请求和响应
+            // Handle semantic token requests and responses
             workspace: {
-                ...(langClient.clientOptions.middleware?.workspace || {}),
-                // 拦截和处理语义令牌响应
+                ...(langClient.clientOptions.middleware?.workspace || {}),                // Intercept and process semantic token responses
                 handleWorkspaceSymbol: (params, token, next) => {
-                    console.log('拦截到工作区符号请求:', JSON.stringify(params));
+                    console.log('Intercepted workspace symbol request:', JSON.stringify(params));
                     return next(params, token);
                 }
             },
-            // 文档操作中间件
+            // Document operation middleware
             textDocument: {
                 ...(langClient.clientOptions.middleware?.textDocument || {}),
-                // 处理语义令牌响应
+                // Handle semantic token responses
                 semanticTokens: {
                     ...(langClient.clientOptions.middleware?.textDocument?.semanticTokens || {}),
                     full: (document, token, next) => {
-                        console.log(`请求文档的语义令牌: ${document.uri}`);
+                        console.log(`Requesting semantic tokens for document: ${document.uri}`);
                         
-                        // 先检查服务器是否支持语义令牌
-                        if (!langClient.initializeResult?.capabilities?.semanticTokensProvider) {
-                            console.log('服务器不支持语义令牌功能，跳过请求');
-                            // 返回 null 以保留现有着色（如果有）
+                        // First check if server supports semantic tokens
+                        if (!langClient.initializeResult?.capabilities?.semanticTokensProvider) {                            console.log('Server does not support semantic tokens functionality, skipping request');
+                            // Return null to preserve existing coloring (if any)
                             return Promise.resolve(null);
                         }
                         
-                        // 调用原始处理程序获取令牌
+                        // Call original handler to get tokens
                         return next(document, token).then(tokens => {
-                            if (tokens) {
-                                console.log(`收到语义令牌数据，数据长度: ${tokens.data ? tokens.data.length : '未知'}`);
+                            if (tokens) {                                console.log(`Received semantic token data, data length: ${tokens.data ? tokens.data.length : 'unknown'}`);
                                 if (tokens.data && tokens.data.length > 0) {
-                                    console.log(`令牌数据示例: [${tokens.data.slice(0, 10).join(', ')}]...`);
+                                    console.log(`Token data example: [${tokens.data.slice(0, 10).join(', ')}]...`);
                                 }
-                            } else {
-                                console.log('未收到语义令牌数据 (可能服务器返回空或null)');
-                                // 如果服务器明确返回 null 或 undefined，也视为保留现有令牌
+                            } else {                                console.log('No semantic token data received (server may have returned empty or null)');
+                                // If server explicitly returns null or undefined, also preserve existing tokens
                             }
-                            return tokens; // 返回获取到的令牌
-                        }).catch(error => {
-                            console.error(`请求语义令牌失败: ${error.message}`);
-                            // 在请求失败时返回 null，指示 VS Code 保留之前的令牌
+                            return tokens; // Return retrieved tokens
+                        }).catch(error => {                            console.error(`Semantic token request failed: ${error.message}`);
+                            // Return null on request failure, instructing VS Code to preserve previous tokens
                             return null;
                         });
                     }
@@ -664,7 +632,7 @@ function startActualLSP(context, runtimePath, lspPort) {
             }
         };
         
-        // 注册语义令牌提供器到服务器初始化选项
+        // Register semantic token provider to server initialization options
         langClient.registerProposedFeatures();
         const initOptions = langClient.initializeParams?.initializationOptions || {};
         langClient.initializeParams = {
@@ -677,15 +645,13 @@ function startActualLSP(context, runtimePath, lspPort) {
             }
         };
 
-        // 启动客户端
+        // Start client
         const disposable = langClient.start();
 
-        disposable.then(() => {
-            vscode.window.showInformationMessage('Onion语言服务器已启动');
-            console.log('LSP服务器已成功启动');
-        }).catch(error => {
-            vscode.window.showErrorMessage(`Onion语言服务器启动失败: ${error.message}`);
-            console.error('LSP启动失败:', error);
+        disposable.then(() => {            vscode.window.showInformationMessage('Onion language server started');
+            console.log('LSP server started successfully');
+        }).catch(error => {            vscode.window.showErrorMessage(`Onion language server startup failed: ${error.message}`);
+            console.error('LSP startup failed:', error);
             langClient.outputChannel.show();
         });
 
@@ -697,60 +663,57 @@ function startActualLSP(context, runtimePath, lspPort) {
             }
         });
 
-        // 添加自定义通知处理器，获取更多日志信息
+        // Add custom notification handler to get more log information
         langClient.onNotification('window/logMessage', (params) => {
-            console.log(`LSP日志: [${params.type}] ${params.message}`);
-        });
-
-        // 添加原始响应数据跟踪
+            console.log(`LSP log: [${params.type}] ${params.message}`);
+        });        // Add raw response data tracking
         langClient.onRequest('textDocument/completion', (params, token) => {
-            console.log('拦截到补全请求:', JSON.stringify(params));
-            // 不处理请求，返回undefined让常规处理继续
+            console.log('Intercepted completion request:', JSON.stringify(params));
+            // Don't handle request, return undefined to let regular processing continue
             return undefined;
         });
 
-    } catch (err) {
-        console.error('创建LSP客户端时出错:', err);
-        vscode.window.showErrorMessage(`无法启动Onion语言服务: ${err.message}`);
+    } catch (err) {        console.error('Error creating LSP client:', err);
+        vscode.window.showErrorMessage(`Unable to start Onion language service: ${err.message}`);
     }
 }
 
 /**
- * 将Onion的补全类型转换为VSCode的补全类型
- * @param {string} kind 补全类型名称
- * @returns {number} VSCode补全类型
+ * Convert Onion completion types to VSCode completion types
+ * @param {string} kind Completion type name
+ * @returns {number} VSCode completion type
  */
 function translateCompletionKind(kind) {
-    // 使用 VSCode 内置的 CompletionItemKind
+    // Use VSCode built-in CompletionItemKind
     const vscodeKinds = vscode.CompletionItemKind;
     
-    // 将字符串类型转换为 VSCode CompletionItemKind
+    // Convert string type to VSCode CompletionItemKind
     if (typeof kind === 'string') {
         return kind in vscodeKinds ? vscodeKinds[kind] : vscodeKinds.Text;
     }
     
-    // 如果已经是数字，检查是否在有效范围内
+    // If already a number, check if within valid range
     if (typeof kind === 'number' && kind >= 1 && kind <= 25) {
         return kind;
     }
     
-    // 默认类型
+    // Default type
     return vscodeKinds.Text;
 }
 
 /**
- * 直接向LSP服务器发送补全请求
- * @param {vscode.TextDocument} document 当前文档
- * @param {vscode.Position} position 光标位置
+ * Send completion request directly to LSP server
+ * @param {vscode.TextDocument} document Current document
+ * @param {vscode.Position} position Cursor position
  */
 async function requestCompletionFromLSP(document, position) {
     if (!langClient) {
-        console.log('LSP客户端未初始化，无法请求补全');
+        console.log('LSP client not initialized, unable to request completion');
         return;
     }
 
     try {
-        console.log(`向LSP发送补全请求，位置: ${position.line}:${position.character}`);
+        console.log(`Sending completion request to LSP, position: ${position.line}:${position.character}`);
 
         const params = {
             textDocument: {
@@ -763,12 +726,10 @@ async function requestCompletionFromLSP(document, position) {
             context: {
                 triggerKind: "Invoked"
             }
-        };
+        };        // Log completion request parameters for debugging
+        console.log('Sent completion request parameters:', JSON.stringify(params));
 
-        // 记录发送的补全请求参数以便调试
-        console.log('发送的补全请求参数:', JSON.stringify(params));
-
-        // 向LSP服务器发送补全请求
+        // Send completion request to LSP server
         const completionList = await langClient.sendRequest('textDocument/completion', params);
 
         if (completionList) {
@@ -777,80 +738,74 @@ async function requestCompletionFromLSP(document, position) {
                 : (completionList.items || []);
 
             const itemCount = items.length;
-            console.log(`收到来自LSP的补全建议: ${itemCount} 项`);
+            console.log(`Received completion suggestions from LSP: ${itemCount} items`);
 
-            // 详细记录收到的建议，帮助调试
-            if (itemCount > 0) {
-                console.log(`补全建议示例: ${JSON.stringify(items.slice(0, 3))}`);
+            // Detailed logging of received suggestions for debugging
+            if (itemCount > 0) {                console.log(`Completion suggestion examples: ${JSON.stringify(items.slice(0, 3))}`);
 
-                // 将LSP补全结果转换为VSCode补全项
+                // Convert LSP completion results to VSCode completion items
                 const vscodeItems = items.map(item => {
                     return new vscode.CompletionItem(
                         item.label,
                         translateCompletionKind(item.kind)
                     );
-                });
-
-                // 直接显示补全项
-                // 这里不直接调用triggerSuggest，而是通过VSCode API提供补全项
+                });                // Display completion items directly
+                // Don't call triggerSuggest directly here, instead provide completion items through VSCode API
                 return vscodeItems;
             }
         } else {
-            console.log('LSP服务器未返回补全建议');
+            console.log('LSP server did not return completion suggestions');
         }
 
-        return []; // 返回空数组表示没有补全建议
+        return []; // Return empty array indicating no completion suggestions
 
-    } catch (error) {
-        console.error('获取补全请求时出错:', error);
+    } catch (error) {        console.error('Error getting completion request:', error);
         if (error.message) {
-            console.error('错误消息:', error.message);
+            console.error('Error message:', error.message);
         }
         if (error.code) {
-            console.error('错误代码:', error.code);
+            console.error('Error code:', error.code);
         }
-        return []; // 出错时返回空数组
+        return []; // Return empty array on error
     }
 }
 
 /**
- * 运行Onion文件
+ * Run Onion file
  */
 async function runOnionFile() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-        vscode.window.showErrorMessage('没有打开的编辑器');
+        vscode.window.showErrorMessage('No open editor');
         return;
     }
 
     const document = editor.document;
     if (document.languageId !== 'Onion') {
-        vscode.window.showErrorMessage('当前文件不是Onion文件');
+        vscode.window.showErrorMessage('Current file is not an Onion file');
         return;
     }
 
-    // 保存文件
+    // Save file
     await document.save();
     const filePath = document.fileName;
     const fileDir = path.dirname(filePath);
 
-    // 获取用户配置
+    // Get user configuration
     const config = vscode.workspace.getConfiguration('Onion');
     let runtimePath = config.get('runtimePath') || 'onion';
     const useFullPath = config.get('useFullPath') || false;
     let workingDir = config.get('workingDirectory') || fileDir;
-    const shellType = config.get('shellType') || 'default';
-
-    // 如果使用完整路径但提供的不是绝对路径，尝试找到可执行文件
+    const shellType = config.get('shellType') || 'default';    // If using full path but provided path is not absolute, try to find executable
     if (useFullPath && !path.isAbsolute(runtimePath)) {
-        vscode.window.showWarningMessage('您启用了使用完整路径，但提供的路径不是绝对路径');
+        vscode.window.showWarningMessage('You have enabled using full path, but the provided path is not absolute');
     }
 
-    // 确定Shell类型
+    // Determine Shell type
     const isWindows = process.platform === 'win32';
     let isPowerShell = false;
 
-    // 设置Shell类型相关参数
+    // Set Shell type related parameters
     let terminalOptions = {
         name: 'Onion',
         cwd: workingDir
@@ -873,79 +828,75 @@ async function runOnionFile() {
             }
         }
     } else if (isWindows) {
-        // 在Windows上检测默认终端是否为PowerShell
+        // Detect whether default terminal is PowerShell on Windows
         try {
             const defaultShell = vscode.env.shell;
             isPowerShell = defaultShell && defaultShell.toLowerCase().includes('powershell');
         } catch (error) {
-            console.error('无法检测默认Shell:', error);
+            console.error('Unable to detect default Shell:', error);
         }
     }
 
-    // 重用或创建终端
+    // Reuse or create terminal
     if (!OnionTerminal) {
         OnionTerminal = vscode.window.createTerminal(terminalOptions);
     }
 
-    // 显示终端
+    // Show terminal
     OnionTerminal.show();
 
-    // 清空终端 (可选)
-    // 对于PowerShell
+    // Clear terminal (optional)
+    // For PowerShell
     if (isPowerShell) {
         OnionTerminal.sendText('Clear-Host', true);
     }
-    // 对于CMD和其他终端
+    // For CMD and other terminals
     else if (isWindows) {
         OnionTerminal.sendText('cls', true);
     } else {
         OnionTerminal.sendText('clear', true);
     }
 
-    // 构建命令 - 根据Shell类型处理路径
+    // Build command - handle paths according to Shell type
     let command = '';
 
-    // 对路径进行处理，确保在不同Shell中正确执行
+    // Process paths to ensure correct execution in different Shells
     if (isWindows) {
         if (isPowerShell) {
-            // PowerShell中执行
+            // Execute in PowerShell
             if (runtimePath.includes(' ')) {
                 command = `& '${runtimePath}' run '${filePath}'`;
             } else {
                 command = `${runtimePath} run '${filePath}'`;
             }
         } else {
-            // CMD中执行
+            // Execute in CMD
             command = `${runtimePath} run "${filePath}"`;
         }
     } else {
-        // Unix类系统
+        // Unix-like systems
         if (runtimePath.includes(' ')) {
             command = `"${runtimePath}" run "${filePath}"`;
         } else {
             command = `${runtimePath} run "${filePath}"`;
         }
-    }
-
-    // 发送命令到终端
-    console.log('执行命令:', command);
-    OnionTerminal.sendText(command);
-
-    // 如果遇到问题，提供帮助信息
+    }    // Send command to terminal
+    console.log('Executing command:', command);
+    OnionTerminal.sendText(command);    // If encountering problems, provide help information
     if (!fs.existsSync(runtimePath) && path.isAbsolute(runtimePath)) {
         OnionTerminal.sendText('', true);
-        OnionTerminal.sendText('# 可执行文件路径不存在，请检查Onion.runtimePath配置', true);
+        OnionTerminal.sendText('# Executable file path does not exist, please check Onion.runtimePath configuration', true);
     }
 }
 
 function deactivate() {
-    // 清理资源
+    // Clean up resources
     if (OnionTerminal) {
         OnionTerminal.dispose();
         OnionTerminal = null;
     }
 
-    // 停止LSP客户端
+    // Stop LSP client
     if (langClient) {
         return langClient.stop();
     }
